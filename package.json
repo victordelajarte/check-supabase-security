@@ -18,6 +18,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/jest": "30.0.0",
+    "@types/node": "25.0.3",
     "@typescript-eslint/eslint-plugin": "8.49.0",
     "@typescript-eslint/parser": "8.49.0",
     "eslint": "9.39.1",
@@ -28,5 +29,9 @@
     "ts-jest": "29.4.6",
     "tsx": "4.19.2",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "playwright": "1.57.0",
+    "zod": "4.2.1"
   }
 }
