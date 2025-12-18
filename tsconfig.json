@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "module": "nodenext",
+        "target": "esnext",
+        "moduleResolution": "nodenext",
+        "strict": true,
+        "isolatedModules": true,
+        "outDir": "./dist",
+        "rootDir": "./src"
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist", "test"]
+}
