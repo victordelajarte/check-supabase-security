@@ -6,3 +6,5 @@ output
 input
 
 .DS_Store
+
+*.txt

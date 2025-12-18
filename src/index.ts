@@ -1,3 +1,4 @@
+import { appendFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { z } from "zod/mini";
 
@@ -67,7 +68,18 @@ async function testAuthInfos(authInfos: {
       apiKey: authInfos.apiKey,
     });
 
-    console.log({ tableName, ...response });
+    if (response.error) {
+      console.log("Error on table ", tableName, ": ", response.error);
+      continue;
+    }
+
+    if (response.data.length) {
+      console.log(`✅ Table "${tableName}" is OPEN: `, response.data[0]);
+      await appendFile("open_tables.txt", tableName + "\n");
+    } else {
+      console.log(`❌ Table "${tableName}" is CLOSED`);
+      await appendFile("closed_tables.txt", tableName + "\n");
+    }
   }
 }
 
@@ -119,7 +131,18 @@ async function main(websiteUrl: string) {
 
   await testAuthInfos(authInfos);
 
-  console.log("Done");
+  console.log(`Done, you can check open_tables.txt and closed_tables.txt files.
+
+This script only tests public SELECT permissions.
+
+In the open_tables.txt file, you have the list of tables that are publicly accessible.
+In the closed_tables.txt file, you have the list of tables that are not publicly accessible for select.
+
+🚨🚨🚨
+It does not mean there is no vulnerability on these tables !
+You need to make sure that, as an authenticated user, you can only see what is yours
+Furthermore, if some tables are closed for select, they may still be vulnerable to INSERT/UPDATE/DELETE attacks.
+🚨🚨🚨`);
 
   process.exit(0);
 }
