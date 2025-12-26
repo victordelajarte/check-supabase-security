@@ -110,6 +110,9 @@ const isSupabaseUrl = (url: string): boolean => {
 };
 
 async function getAuthFromBrowser(websiteUrl: string) {
+  const COMMON_PATHS = ["/login", "/register", "/signup", "/sign-in", "/auth"];
+  const DELAY = 5;
+
   browserInstance = await chromium.launch({ headless: false });
   const context = await browserInstance.newContext();
   const page = await context.newPage();
@@ -137,10 +140,28 @@ async function getAuthFromBrowser(websiteUrl: string) {
     authInfos.url = params.request.url;
   });
 
+  console.log(`Navigating to ${websiteUrl}...`);
   await page.goto(websiteUrl);
-
-  const DELAY = 5;
   await wait(DELAY);
+
+  if (!authInfos.authorization || !authInfos.apiKey) {
+    console.log("No Supabase request found. Trying common auth pages...");
+    const baseUrl = new URL(websiteUrl);
+
+    for (const path of COMMON_PATHS) {
+      if (authInfos.authorization && authInfos.apiKey) break;
+
+      const testUrl = `${baseUrl.origin}${path}`;
+      console.log(`Trying ${testUrl}...`);
+
+      try {
+        await page.goto(testUrl, { waitUntil: "networkidle", timeout: 10000 });
+        await wait(2);
+      } catch (error) {
+        console.log(`Failed to load ${testUrl}, skipping...`);
+      }
+    }
+  }
 
   await page.close();
   await browserInstance.close();
@@ -148,11 +169,12 @@ async function getAuthFromBrowser(websiteUrl: string) {
 
   if (!authInfos.authorization || !authInfos.apiKey) {
     console.log(
-      "No Supabase request detected, you may need to test another page.",
+      "No Supabase request detected on any page. You may need to manually interact with the website.",
     );
     process.exit(0);
   }
 
+  console.log("Supabase credentials found!");
   return authInfos;
 }
 
