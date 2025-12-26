@@ -1,196 +1,9 @@
-import { appendFile } from "node:fs/promises";
-import { chromium, type Browser } from "playwright";
-import { input } from "@inquirer/prompts";
+import { isSupabaseUrl } from "./utils.js";
+import { checkTablePublicAccess } from "./check-table-access.js";
+import { getAuthFromBrowser, setupSignalHandlers } from "./browser.js";
+import { getUrl, getAuthFromPrompts } from "./prompts.js";
 
-let browserInstance: Browser | null = null;
-
-const wait = (seconds: number) =>
-  new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-
-const cleanup = async () => {
-  if (browserInstance) {
-    console.log("\nClosing browser...");
-    await browserInstance.close();
-    browserInstance = null;
-  }
-};
-
-process.on("SIGINT", async () => {
-  console.log("\nInterrupted. Cleaning up...");
-  await cleanup();
-  process.exit(130);
-});
-
-process.on("SIGTERM", async () => {
-  console.log("\nTerminated. Cleaning up...");
-  await cleanup();
-  process.exit(143);
-});
-
-const testFetchData = async ({
-  url,
-  authorization,
-  apiKey,
-}: {
-  url: string;
-  authorization: string;
-  apiKey: string;
-}) => {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: authorization,
-      apikey: apiKey,
-    },
-  });
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    const error = responseText.includes("does not exist")
-      ? `Table does not exist`
-      : responseText;
-    return { error };
-  }
-
-  const data = await response.json();
-  return { data };
-};
-
-async function testAuthInfos(authInfos: {
-  authorization: string;
-  apiKey: string;
-  url: string;
-}) {
-  const url = new URL(authInfos.url);
-
-  const tables = [
-    "users",
-    "user",
-    "auth_users",
-    "auth_user",
-    "profiles",
-    "profile",
-    "user_profiles",
-    "user_profile",
-    "accounts",
-    "account",
-    "files",
-    "file",
-    "documents",
-    "document",
-    "images",
-    "image",
-  ];
-  for (const tableName of tables) {
-    const tableUrl = new URL(`/rest/v1/${tableName}`, url.origin);
-    tableUrl.searchParams.set("limit", "1");
-
-    const response = await testFetchData({
-      url: tableUrl.toString(),
-      authorization: authInfos.authorization,
-      apiKey: authInfos.apiKey,
-    });
-
-    if (response.error) {
-      console.log("Error on table ", tableName, ": ", response.error);
-      continue;
-    }
-
-    if (response.data.length) {
-      console.log(`✅ Table "${tableName}" is OPEN: `, response.data[0]);
-      await appendFile("open_tables.txt", tableName + "\n");
-    } else {
-      console.log(`❌ Table "${tableName}" is CLOSED`);
-      await appendFile("closed_tables.txt", tableName + "\n");
-    }
-  }
-}
-
-const isSupabaseUrl = (url: string): boolean => {
-  return url.includes("supabase.co") || url.includes("supabase.in");
-};
-
-async function getAuthFromBrowser(websiteUrl: string) {
-  const COMMON_PATHS = ["/login", "/register", "/signup", "/sign-in", "/auth"];
-  const DELAY = 5;
-
-  browserInstance = await chromium.launch({ headless: false });
-  const context = await browserInstance.newContext();
-  const page = await context.newPage();
-
-  const client = await context.newCDPSession(page);
-  await client.send("Network.enable");
-
-  const authInfos = {
-    authorization: "",
-    apiKey: "",
-    url: "",
-  };
-
-  client.on("Network.requestWillBeSent", (params) => {
-    if (!params.request.url.includes("supabase")) return;
-
-    const headers = params.request.headers;
-    const authorization = headers["Authorization"] || headers["authorization"];
-    const apiKey = headers["apikey"] || headers["x-api-key"];
-
-    if (!authorization || !apiKey) return;
-
-    authInfos.authorization = authorization;
-    authInfos.apiKey = apiKey;
-    authInfos.url = params.request.url;
-  });
-
-  console.log(`Navigating to ${websiteUrl}...`);
-  await page.goto(websiteUrl);
-  await wait(DELAY);
-
-  if (!authInfos.authorization || !authInfos.apiKey) {
-    console.log("No Supabase request found. Trying common auth pages...");
-    const baseUrl = new URL(websiteUrl);
-
-    for (const path of COMMON_PATHS) {
-      if (authInfos.authorization && authInfos.apiKey) break;
-
-      const testUrl = `${baseUrl.origin}${path}`;
-      console.log(`Trying ${testUrl}...`);
-
-      try {
-        await page.goto(testUrl, { waitUntil: "networkidle", timeout: 10000 });
-        await wait(2);
-      } catch (error) {
-        console.log(`Failed to load ${testUrl}, skipping...`);
-      }
-    }
-  }
-
-  await page.close();
-  await browserInstance.close();
-  browserInstance = null;
-
-  if (!authInfos.authorization || !authInfos.apiKey) {
-    console.log(
-      "No Supabase request detected on any page. You may need to manually interact with the website.",
-    );
-    process.exit(0);
-  }
-
-  console.log("Supabase credentials found!");
-  return authInfos;
-}
-
-async function getAuthFromPrompts(supabaseUrl: string) {
-  const apiKey = await input({
-    message:
-      "Enter the Supabase public API key (it is visible in the website network and in your Supabase project settings): sb_publishable_...",
-    validate: (value) => (value.trim() ? true : "API key is required"),
-  });
-
-  return {
-    authorization: `Bearer ${apiKey}`,
-    apiKey,
-    url: supabaseUrl,
-  };
-}
+setupSignalHandlers();
 
 async function main(url: string) {
   let authInfos;
@@ -205,7 +18,7 @@ async function main(url: string) {
     authInfos = await getAuthFromBrowser(url);
   }
 
-  await testAuthInfos(authInfos);
+  await checkTablePublicAccess(authInfos);
 
   console.log(`Done, you can check open_tables.txt and closed_tables.txt files.
 
@@ -222,20 +35,5 @@ Furthermore, if some tables are closed for select, they may still be vulnerable 
 
   process.exit(0);
 }
-
-const getUrl = async (): Promise<string> => {
-  const url = await input({
-    message: "Enter URL (website or Supabase URL):",
-    validate: (value) => {
-      try {
-        new URL(value);
-        return true;
-      } catch {
-        return "Please provide a valid URL";
-      }
-    },
-  });
-  return url;
-};
 
 getUrl().then(main);
