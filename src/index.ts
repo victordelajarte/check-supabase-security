@@ -1,9 +1,31 @@
 import { appendFile } from "node:fs/promises";
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 import { input } from "@inquirer/prompts";
+
+let browserInstance: Browser | null = null;
 
 const wait = (seconds: number) =>
   new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+
+const cleanup = async () => {
+  if (browserInstance) {
+    console.log("\nClosing browser...");
+    await browserInstance.close();
+    browserInstance = null;
+  }
+};
+
+process.on("SIGINT", async () => {
+  console.log("\nInterrupted. Cleaning up...");
+  await cleanup();
+  process.exit(130);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\nTerminated. Cleaning up...");
+  await cleanup();
+  process.exit(143);
+});
 
 const testFetchData = async ({
   url,
@@ -88,8 +110,8 @@ const isSupabaseUrl = (url: string): boolean => {
 };
 
 async function getAuthFromBrowser(websiteUrl: string) {
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
+  browserInstance = await chromium.launch({ headless: false });
+  const context = await browserInstance.newContext();
   const page = await context.newPage();
 
   const client = await context.newCDPSession(page);
@@ -121,7 +143,8 @@ async function getAuthFromBrowser(websiteUrl: string) {
   await wait(DELAY);
 
   await page.close();
-  await browser.close();
+  await browserInstance.close();
+  browserInstance = null;
 
   if (!authInfos.authorization || !authInfos.apiKey) {
     console.log(
