@@ -1,6 +1,6 @@
 import { appendFile } from "node:fs/promises";
 import { chromium } from "playwright";
-import { z } from "zod/mini";
+import { input } from "@inquirer/prompts";
 
 const wait = (seconds: number) =>
   new Promise((resolve) => setTimeout(resolve, seconds * 1000));
@@ -147,12 +147,19 @@ Furthermore, if some tables are closed for select, they may still be vulnerable 
   process.exit(0);
 }
 
-const getConfig = () => {
-  const schema = z.object({
-    WEBSITE_URL: z.url("Please provide a valid URL for WEBSITE_URL"),
+const getWebsiteUrl = async (): Promise<string> => {
+  const url = await input({
+    message: "Enter the website URL to test:",
+    validate: (value) => {
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        return "Please provide a valid URL";
+      }
+    },
   });
-  return schema.parse(process.env);
+  return url;
 };
 
-const config = getConfig();
-main(config.WEBSITE_URL);
+getWebsiteUrl().then((url) => main(url));

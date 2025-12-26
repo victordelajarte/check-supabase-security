@@ -4,7 +4,7 @@
   "description": "TypeScript boilerplate with strict config, testing, and linting",
   "main": "dist/index.js",
   "scripts": {
-    "start": "tsx --env-file=.env ./src/index.ts",
+    "start": "tsx ./src/index.ts",
     "build": "tsc",
     "clean": "rm -rf dist",
     "test": "jest",
@@ -31,6 +31,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@inquirer/prompts": "7.2.0",
     "playwright": "1.57.0",
     "zod": "4.2.1"
   }
