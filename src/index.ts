@@ -1,24 +1,26 @@
 import { isSupabaseUrl } from "./utils.js";
 import { checkTablePublicAccess } from "./check-table-access.js";
-import { getAuthFromBrowser, setupSignalHandlers } from "./browser.js";
+import { getAuthFromBrowser, setupSignalHandlers } from "./browser";
 import { getUrl, getAuthFromPrompts } from "./prompts.js";
+import { writeFile } from "node:fs/promises";
 
 setupSignalHandlers();
 
-async function main(url: string) {
-  let authInfos;
-
+function getAuthInfos(url: string) {
   if (isSupabaseUrl(url)) {
-    console.log("Supabase URL detected. Testing tables directly...");
-    authInfos = await getAuthFromPrompts(url);
-  } else {
-    console.log(
-      "Website URL detected. Opening browser to intercept Supabase requests...",
-    );
-    authInfos = await getAuthFromBrowser(url);
+    return getAuthFromPrompts(url);
   }
 
-  await checkTablePublicAccess(authInfos);
+  return getAuthFromBrowser(url);
+}
+
+async function main(url: string) {
+  const authInfos = await getAuthInfos(url);
+
+  const { openTables, closedTables } = await checkTablePublicAccess(authInfos);
+
+  await writeFile("open_tables.txt", openTables.join("\n"));
+  await writeFile("closed_tables.txt", closedTables.join("\n"));
 
   console.log(`Done, you can check open_tables.txt and closed_tables.txt files.
 

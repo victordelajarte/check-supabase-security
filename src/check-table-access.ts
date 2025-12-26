@@ -50,6 +50,8 @@ export async function checkTablePublicAccess(authInfos: AuthInfo) {
     "images",
     "image",
   ];
+  const openTables: string[] = [];
+  const closedTables: string[] = [];
   for (const tableName of tables) {
     const tableUrl = new URL(`/rest/v1/${tableName}`, url.origin);
     tableUrl.searchParams.set("limit", "1");
@@ -61,16 +63,16 @@ export async function checkTablePublicAccess(authInfos: AuthInfo) {
     });
 
     if (response.error) {
-      console.log("Error on table ", tableName, ": ", response.error);
+      console.error("Error on table ", tableName, ": ", response.error);
       continue;
     }
 
     if (response.data.length) {
-      console.log(`✅ Table "${tableName}" is OPEN: `, response.data[0]);
-      await appendFile("open_tables.txt", tableName + "\n");
+      openTables.push(tableName);
     } else {
-      console.log(`❌ Table "${tableName}" is CLOSED`);
-      await appendFile("closed_tables.txt", tableName + "\n");
+      closedTables.push(tableName);
     }
   }
+
+  return { openTables, closedTables };
 }

@@ -23,11 +23,6 @@ export async function getAuthFromPrompts(
   supabaseRootUrl.pathname = "";
   supabaseRootUrl.search = "";
 
-  console.log({
-    supabaseRootUrl: supabaseRootUrl.toString(),
-    supabaseUrl,
-  });
-
   const apiKey = await input({
     message:
       "Enter the Supabase public API key (it is visible in the website network and in your Supabase project settings): sb_publishable_...",
