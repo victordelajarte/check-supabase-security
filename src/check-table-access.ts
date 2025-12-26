@@ -1,4 +1,3 @@
-import { appendFile } from "node:fs/promises";
 import type { AuthInfo } from "./types.js";
 
 const tryFetchData = async ({
@@ -62,7 +61,7 @@ export async function checkTablePublicAccess(authInfos: AuthInfo) {
       apiKey: authInfos.apiKey,
     });
 
-    if (response.error) {
+    if (response.error && response.error !== "Table does not exist") {
       console.error("Error on table ", tableName, ": ", response.error);
       continue;
     }
