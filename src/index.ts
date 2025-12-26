@@ -83,15 +83,16 @@ async function testAuthInfos(authInfos: {
   }
 }
 
-async function main(websiteUrl: string) {
+const isSupabaseUrl = (url: string): boolean => {
+  return url.includes("supabase.co") || url.includes("supabase.in");
+};
+
+async function getAuthFromBrowser(websiteUrl: string) {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // Get CDP session
   const client = await context.newCDPSession(page);
-
-  // Enable network tracking
   await client.send("Network.enable");
 
   const authInfos = {
@@ -129,6 +130,36 @@ async function main(websiteUrl: string) {
     process.exit(0);
   }
 
+  return authInfos;
+}
+
+async function getAuthFromPrompts(supabaseUrl: string) {
+  const apiKey = await input({
+    message:
+      "Enter the Supabase public API key (it is visible in the website network and in your Supabase project settings): sb_publishable_...",
+    validate: (value) => (value.trim() ? true : "API key is required"),
+  });
+
+  return {
+    authorization: `Bearer ${apiKey}`,
+    apiKey,
+    url: supabaseUrl,
+  };
+}
+
+async function main(url: string) {
+  let authInfos;
+
+  if (isSupabaseUrl(url)) {
+    console.log("Supabase URL detected. Testing tables directly...");
+    authInfos = await getAuthFromPrompts(url);
+  } else {
+    console.log(
+      "Website URL detected. Opening browser to intercept Supabase requests...",
+    );
+    authInfos = await getAuthFromBrowser(url);
+  }
+
   await testAuthInfos(authInfos);
 
   console.log(`Done, you can check open_tables.txt and closed_tables.txt files.
@@ -147,9 +178,9 @@ Furthermore, if some tables are closed for select, they may still be vulnerable 
   process.exit(0);
 }
 
-const getWebsiteUrl = async (): Promise<string> => {
+const getUrl = async (): Promise<string> => {
   const url = await input({
-    message: "Enter the website URL to test:",
+    message: "Enter URL (website or Supabase URL):",
     validate: (value) => {
       try {
         new URL(value);
@@ -162,4 +193,4 @@ const getWebsiteUrl = async (): Promise<string> => {
   return url;
 };
 
-getWebsiteUrl().then((url) => main(url));
+getUrl().then(main);
