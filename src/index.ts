@@ -1,4 +1,4 @@
-import { isSupabaseUrl } from "./utils.js";
+import { UrlWrapper } from "./utils.js";
 import { checkTablePublicAccess } from "./check-table-access.js";
 import { getAuthFromBrowser, setupSignalHandlers } from "./browser";
 import { getUrl, getAuthFromPrompts } from "./prompts.js";
@@ -6,15 +6,15 @@ import { writeFile } from "node:fs/promises";
 
 setupSignalHandlers();
 
-function getAuthInfos(url: string) {
-  if (isSupabaseUrl(url)) {
+function getAuthInfos(url: UrlWrapper) {
+  if (url.isSupabaseUrl()) {
     return getAuthFromPrompts(url);
   }
 
   return getAuthFromBrowser(url);
 }
 
-async function main(url: string) {
+async function main(url: UrlWrapper) {
   const authInfos = await getAuthInfos(url);
 
   const { openTables, closedTables } = await checkTablePublicAccess(authInfos);

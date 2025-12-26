@@ -1,5 +1,6 @@
 import type { CDPSession } from "playwright";
 import type { AuthInfo } from "../types.js";
+import { UrlWrapper } from "../utils.js";
 
 export async function setupNetworkInterceptor(
   client: CDPSession,
@@ -18,6 +19,6 @@ export async function setupNetworkInterceptor(
 
     authInfos.authorization = authorization;
     authInfos.apiKey = apiKey;
-    authInfos.url = params.request.url;
+    authInfos.url = new UrlWrapper(params.request.url);
   });
 }

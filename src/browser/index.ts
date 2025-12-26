@@ -6,13 +6,13 @@ import {
   tryAuthLinksStrategy,
   tryCommonPathsStrategy,
 } from "./strategies.js";
-import { wait } from "../utils.js";
+import { UrlWrapper, wait } from "../utils.js";
 import { DELAY } from "./constants.js";
 
 export { setupSignalHandlers } from "./lifecycle.js";
 
 export async function getAuthFromBrowser(
-  websiteUrl: string,
+  websiteUrl: UrlWrapper,
 ): Promise<AuthInfo> {
   const browser = await launchBrowser();
   const context = await browser.newContext();
@@ -21,20 +21,20 @@ export async function getAuthFromBrowser(
   const authInfos: AuthInfo = {
     authorization: "",
     apiKey: "",
-    url: "",
+    url: websiteUrl,
   };
 
   const client = await context.newCDPSession(page);
   await setupNetworkInterceptor(client, authInfos);
 
   try {
-    await page.goto(websiteUrl, {
+    await page.goto(websiteUrl.toString(), {
       waitUntil: "networkidle",
       timeout: DELAY * 1000,
     });
     await wait(DELAY);
   } catch (error) {
-    console.error(`Failed to load ${websiteUrl}, continuing...`);
+    console.error(`Failed to load ${websiteUrl.toString()}, continuing...`);
   }
 
   if (!authInfos.authorization || !authInfos.apiKey) {

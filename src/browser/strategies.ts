@@ -1,6 +1,6 @@
 import type { Page } from "playwright";
 import type { AuthInfo } from "../types.js";
-import { wait } from "../utils.js";
+import { UrlWrapper, wait } from "../utils.js";
 import {
   extractPageContent,
   fetchExternalScripts,
@@ -33,7 +33,7 @@ export async function trySourceCodeExtraction(
   const credentials = findSupabaseCredentials(allContent);
 
   if (credentials) {
-    authInfos.url = credentials.url;
+    authInfos.url = new UrlWrapper(credentials.url);
     authInfos.apiKey = credentials.apiKey;
     authInfos.authorization = `Bearer ${credentials.apiKey}`;
     return true;
@@ -60,11 +60,9 @@ export async function tryAuthLinksStrategy(
 
 export async function tryCommonPathsStrategy(
   page: Page,
-  websiteUrl: string,
+  websiteUrl: UrlWrapper,
   authInfos: AuthInfo,
 ): Promise<boolean> {
-  const baseUrl = new URL(websiteUrl);
-
   const commonAuthPaths = [
     "/login",
     "/register",
@@ -76,7 +74,7 @@ export async function tryCommonPathsStrategy(
   for (const path of commonAuthPaths) {
     if (authInfos.authorization && authInfos.apiKey) return true;
 
-    const testUrl = new URL(path, baseUrl.origin);
+    const testUrl = new URL(path, websiteUrl.getStandardUrl().origin);
     await checkPage(page, testUrl.toString());
   }
 

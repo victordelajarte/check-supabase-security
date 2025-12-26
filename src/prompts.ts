@@ -1,37 +1,37 @@
 import { input } from "@inquirer/prompts";
 import type { AuthInfo } from "./types.js";
+import { UrlWrapper } from "./utils.js";
 
-export const getUrl = async (): Promise<string> => {
+export const getUrl = async (): Promise<UrlWrapper> => {
   const url = await input({
     message: "Enter URL (website or Supabase URL):",
     validate: (value) => {
       try {
-        new URL(value);
+        new UrlWrapper(value);
         return true;
       } catch {
-        return "Please provide a valid URL";
+        return "Please enter a valid URL";
       }
     },
   });
-  return url;
+
+  return new UrlWrapper(url);
 };
 
 export async function getAuthFromPrompts(
-  supabaseUrl: string,
+  supabaseUrl: UrlWrapper,
 ): Promise<AuthInfo> {
-  const supabaseRootUrl = new URL(supabaseUrl);
-  supabaseRootUrl.pathname = "";
-  supabaseRootUrl.search = "";
+  const supabaseRootUrl = supabaseUrl.getRootUrl();
 
   const apiKey = await input({
     message:
       "Enter the Supabase public API key (it is visible in the website network and in your Supabase project settings): sb_publishable_...",
-    validate: (value) => (value.trim() ? true : "API key is required"),
+    required: true,
   });
 
   return {
     authorization: `Bearer ${apiKey}`,
     apiKey,
-    url: supabaseRootUrl.toString(),
+    url: supabaseRootUrl,
   };
 }

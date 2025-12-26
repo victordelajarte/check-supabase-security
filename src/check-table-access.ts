@@ -30,7 +30,7 @@ const tryFetchData = async ({
 };
 
 export async function checkTablePublicAccess(authInfos: AuthInfo) {
-  const url = new URL(authInfos.url);
+  const url = authInfos.url.getStandardUrl();
 
   const tables = [
     "users",
