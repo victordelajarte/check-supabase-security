@@ -68,11 +68,14 @@ export async function getAuthFromBrowser(websiteUrl: string): Promise<AuthInfo> 
     for (const path of COMMON_PATHS) {
       if (authInfos.authorization && authInfos.apiKey) break;
 
-      const testUrl = `${baseUrl.origin}${path}`;
+      const testUrl = new URL(path, baseUrl.origin);
       console.log(`Trying ${testUrl}...`);
 
       try {
-        await page.goto(testUrl, { waitUntil: "networkidle", timeout: 10000 });
+        await page.goto(testUrl.toString(), {
+          waitUntil: "networkidle",
+          timeout: 10000,
+        });
         await wait(2);
       } catch (error) {
         console.log(`Failed to load ${testUrl}, skipping...`);

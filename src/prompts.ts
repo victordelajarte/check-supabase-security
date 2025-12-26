@@ -16,7 +16,18 @@ export const getUrl = async (): Promise<string> => {
   return url;
 };
 
-export async function getAuthFromPrompts(supabaseUrl: string): Promise<AuthInfo> {
+export async function getAuthFromPrompts(
+  supabaseUrl: string,
+): Promise<AuthInfo> {
+  const supabaseRootUrl = new URL(supabaseUrl);
+  supabaseRootUrl.pathname = "";
+  supabaseRootUrl.search = "";
+
+  console.log({
+    supabaseRootUrl: supabaseRootUrl.toString(),
+    supabaseUrl,
+  });
+
   const apiKey = await input({
     message:
       "Enter the Supabase public API key (it is visible in the website network and in your Supabase project settings): sb_publishable_...",
@@ -26,6 +37,6 @@ export async function getAuthFromPrompts(supabaseUrl: string): Promise<AuthInfo>
   return {
     authorization: `Bearer ${apiKey}`,
     apiKey,
-    url: supabaseUrl,
+    url: supabaseRootUrl.toString(),
   };
 }
