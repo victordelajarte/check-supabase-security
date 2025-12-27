@@ -1,23 +1,18 @@
-import { UrlWrapper } from "./utils.js";
-import { checkTablePublicAccess } from "./check-table-access.js";
-import { getAuthFromBrowser, setupSignalHandlers } from "./browser";
-import { getUrl, getAuthFromPrompts } from "./prompts.js";
+import { setupSignalHandlers } from "./browser/index.js";
+import { getUrl } from "./prompts.js";
 import { writeFile } from "node:fs/promises";
+import { checkSupabaseSecurity } from "./core/checker.js";
+import type { UrlWrapper } from "./utils.js";
 
 setupSignalHandlers();
 
-function getAuthInfos(url: UrlWrapper) {
-  if (url.isSupabaseUrl()) {
-    return getAuthFromPrompts(url);
-  }
-
-  return getAuthFromBrowser(url);
-}
-
 async function main(url: UrlWrapper) {
-  const authInfos = await getAuthInfos(url);
-
-  const { openTables, closedTables } = await checkTablePublicAccess(authInfos);
+  const { openTables, closedTables } = await checkSupabaseSecurity(
+    url,
+    (msg) => {
+      console.log(`[Progress] ${msg}`);
+    },
+  );
 
   await writeFile("open_tables.txt", openTables.join("\n"));
   await writeFile("closed_tables.txt", closedTables.join("\n"));

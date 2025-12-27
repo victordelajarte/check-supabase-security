@@ -61,8 +61,10 @@ export async function checkTablePublicAccess(authInfos: AuthInfo) {
       apiKey: authInfos.apiKey,
     });
 
-    if (response.error && response.error !== "Table does not exist") {
-      console.error("Error on table ", tableName, ": ", response.error);
+    if (response.error) {
+      if (response.error !== "Table does not exist") {
+        console.error("Error on table ", tableName, ": ", response.error);
+      }
       continue;
     }
 

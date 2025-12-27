@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Supabase Security Checker</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Supabase Security Checker</h1>
+        <p class="subtitle">
+          Check which database tables are publicly accessible
+        </p>
+      </header>
+
+      <main>
+        <form id="checkForm">
+          <div class="form-group">
+            <label for="urlInput">Website or Supabase URL:</label>
+            <input
+              type="text"
+              id="urlInput"
+              name="url"
+              placeholder="https://example.com or https://project.supabase.co"
+              required
+            />
+          </div>
+          <button type="submit" id="submitBtn">Check Security</button>
+        </form>
+
+        <div id="progress" class="progress" style="display: none">
+          <div class="spinner"></div>
+          <p id="progressMessage">Initializing...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none"></div>
+
+        <div id="results" class="results" style="display: none">
+          <h2>Results</h2>
+
+          <div class="warning-box">
+            <strong>Important:</strong> This tool only tests public SELECT
+            permissions. Even closed tables may be vulnerable to
+            INSERT/UPDATE/DELETE attacks. Always verify that authenticated users
+            can only access their own data.
+          </div>
+
+          <div class="tables-container">
+            <div class="table-section">
+              <h3>🚨 Open Tables (Publicly Accessible)</h3>
+              <div id="openTables" class="table-list"></div>
+            </div>
+
+            <div class="table-section">
+              <h3>✅ Closed Tables (Not Publicly Accessible)</h3>
+              <div id="closedTables" class="table-list"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <p>
+          This tool checks common table names for public SELECT access via
+          Supabase REST API
+        </p>
+      </footer>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
